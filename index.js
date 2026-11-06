@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, PermissionFlagsBits, ActivityType } = require('discord.js');
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 
@@ -120,9 +120,16 @@ const commands = [
     .setDescription('姉妹鯖の情報を表示します')
 ].map(command => command.toJSON());
 
-// スラッシュコマンドの登録
+// スラッシュコマンドの登録＆ステータス設定
 client.on('ready', async () => {
   console.log(`${client.user.tag} が起動したよ！`);
+
+  // ステータス（アクティビティ）の設定
+  client.user.setPresence({
+    activities: [{ name: '/help | 1 on 1稼働', type: ActivityType.Custom }],
+    status: 'online',
+  });
+
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   try {
     await rest.put(
