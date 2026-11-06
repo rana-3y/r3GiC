@@ -126,7 +126,7 @@ client.on('ready', async () => {
 
   // ステータス（アクティビティ）の設定
   client.user.setPresence({
-    activities: [{ name: '/help | 1 on 1稼働', type: ActivityType.Custom }],
+    activities: [{ name: '/help | 1 on 1稼働', type: ActivityType.Playing }],
     status: 'online',
   });
 
