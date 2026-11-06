@@ -221,4 +221,80 @@ client.on('interactionCreate', async interaction => {
   }
 
   // --- /inv-add (サーバー主のみ) ---
-  if (command
+  if (commandName === 'inv-add') {
+    if (interaction.guild.ownerId !== interaction.user.id) {
+      return interaction.reply({ content: 'このコマンドはサーバー主のみが使用できます！', ephemeral: true });
+    }
+
+    const target = options.getUser('target');
+    const addCount = options.getInteger('count');
+    const currentCount = await getInviteCount(target.id);
+    const newCount = currentCount + addCount;
+
+    await setInviteCount(target.id, newCount);
+    await interaction.reply(`${target.username} さんの招待数を **${addCount}** 追加しました。（現在: ${newCount}）`);
+  }
+
+  // --- /inv-remove (サーバー主のみ) ---
+  if (commandName === 'inv-remove') {
+    if (interaction.guild.ownerId !== interaction.user.id) {
+      return interaction.reply({ content: 'このコマンドはサーバー主のみが使用できます！', ephemeral: true });
+    }
+
+    const target = options.getUser('target');
+    const removeCount = options.getInteger('count');
+    const currentCount = await getInviteCount(target.id);
+    const newCount = Math.max(0, currentCount - removeCount);
+
+    await setInviteCount(target.id, newCount);
+    await interaction.reply(`${target.username} さんの招待数を **${removeCount}** 減らしました。（現在: ${newCount}）`);
+  }
+
+  // --- /rl-add (管理者権限持ちのみ) ---
+  if (commandName === 'rl-add') {
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ content: 'このコマンドは管理者権限を持つ運営メンバーのみが使用できます！', ephemeral: true });
+    }
+
+    const target = options.getUser('target');
+    const addCount = options.getInteger('count');
+    const currentCount = await getRoleCount(target.id);
+    const newCount = currentCount + addCount;
+
+    await setRoleCount(target.id, newCount);
+    await interaction.reply(`${target.username} さんの特別ロール所持数を **${addCount}** 追加しました。（現在: ${newCount}）`);
+  }
+
+  // --- /rl-remove (管理者権限持ちのみ) ---
+  if (commandName === 'rl-remove') {
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ content: 'このコマンドは管理者権限を持つ運営メンバーのみが使用できます！', ephemeral: true });
+    }
+
+    const target = options.getUser('target');
+    const removeCount = options.getInteger('count');
+    const currentCount = await getRoleCount(target.id);
+    const newCount = Math.max(0, currentCount - removeCount);
+
+    await setRoleCount(target.id, newCount);
+    await interaction.reply(`${target.username} さんの特別ロール所持数を **${removeCount}** 減らしました。（現在: ${newCount}）`);
+  }
+
+  // --- /say (サーバー主のみ) ---
+  if (commandName === 'say') {
+    if (interaction.guild.ownerId !== interaction.user.id) {
+      return interaction.reply({ content: 'このコマンドはサーバー主のみが使用できます！', ephemeral: true });
+    }
+
+    const messageText = options.getString('message');
+    await interaction.channel.send(messageText);
+    await interaction.reply({ content: 'メッセージを送信したよ！', ephemeral: true });
+  }
+
+  // --- /mdv ---
+  if (commandName === 'mdv') {
+    await interaction.reply('姉妹鯖関係を結んでいるのはmaison de vacancier様です！');
+  }
+});
+
+client.login(process.env.DISCORD_TOKEN);
