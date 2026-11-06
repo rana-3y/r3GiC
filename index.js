@@ -107,7 +107,12 @@ const commands = [
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption(option => 
       option.setName('message').setDescription('送信したいメッセージ').setRequired(true)
-    )
+    ),
+
+  // /mdv (姉妹鯖の案内)
+  new SlashCommandBuilder()
+    .setName('mdv')
+    .setDescription('姉妹鯖の情報を表示します')
 ].map(command => command.toJSON());
 
 // スラッシュコマンドの登録
@@ -205,4 +210,15 @@ client.on('interactionCreate', async interaction => {
       const remain = 6 - count;
       message += ` > 残りカウント${remain}で「招き猫🐱」ロール`;
     } else if (count < 10) {
-      const
+      const remain = 10 - count;
+      message += ` > 残りカウント${remain}で「招き猫の親🐱」ロール`;
+    } else if (count < 15) {
+      const remain = 15 - count;
+      message += ` > 残りカウント${remain}で「招き猫の神(=^・^=)🐱」ロール`;
+    }
+
+    await interaction.reply(message);
+  }
+
+  // --- /inv-add (サーバー主のみ) ---
+  if (command
