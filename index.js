@@ -32,6 +32,11 @@ app.listen(PORT, () => console.log(`Web server running on port ${PORT}`));
 
 // スラッシュコマンドの定義
 const commands = [
+  // /help
+  new SlashCommandBuilder()
+    .setName('help')
+    .setDescription('Botのコマンド一覧と使い方を表示します'),
+
   // /sc mm と /sc rl
   new SlashCommandBuilder()
     .setName('sc')
@@ -182,6 +187,25 @@ client.on('interactionCreate', async interaction => {
 
   const { commandName, options } = interaction;
 
+  // --- /help ---
+  if (commandName === 'help') {
+    const helpMessage = `🤖 **r3GiC Bot コマンド一覧** 🤖
+• \`/help\` : このヘルプメッセージを表示します
+• \`/sc mm\` : Botを除いたサーバーのメンバー数を表示します
+• \`/sc rl\` : 現在の特別ロール所持数を確認します
+• \`/inv\` : 現在の招待数と次のロールまでの残りを確認します
+• \`/mdv\` : 姉妹鯖の情報を表示します
+
+🔒 **【管理者・運営専用コマンド】**
+• \`/inv-add\` : 招待数を追加する (サーバー主)
+• \`/inv-remove\` : 招待数を減らす (サーバー主)
+• \`/rl-add\` : 特別ロール所持数を追加する (運営)
+• \`/rl-remove\` : 特別ロール所持数を減らす (運営)
+• \`/say\` : 指定したメッセージをBotに喋らせる (サーバー主)`;
+
+    await interaction.reply({ content: helpMessage, ephemeral: true });
+  }
+
   // --- /sc mm または /sc rl ---
   if (commandName === 'sc') {
     const subcommand = options.getSubcommand();
@@ -208,13 +232,13 @@ client.on('interactionCreate', async interaction => {
 
     if (count < 6) {
       const remain = 6 - count;
-      message += ` > 残りカウント${remain}で「招き猫🐱」ロール`;
+      message += ` > 残りカウント${remain}でサーバーの「招き猫🐱」ロール`;
     } else if (count < 10) {
       const remain = 10 - count;
-      message += ` > 残りカウント${remain}で「招き猫の親🐱」ロール`;
+      message += ` > 残りカウント${remain}でサーバーの「招き猫の親🐱」ロール`;
     } else if (count < 15) {
       const remain = 15 - count;
-      message += ` > 残りカウント${remain}で「招き猫の神(=^・^=)🐱」ロール`;
+      message += ` > 残りカウント${remain}でサーバーの「招き猫の神(=^・^=)🐱」ロール`;
     }
 
     await interaction.reply(message);
