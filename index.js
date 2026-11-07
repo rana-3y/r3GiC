@@ -16,6 +16,12 @@ db.run(`
     count INTEGER DEFAULT 0
   )
 `);
+db.run(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value INTEGER
+  )
+`);
 
 const client = new Client({ 
   intents: [
@@ -105,14 +111,23 @@ const commands = [
       option.setName('count').setDescription('減らす数').setRequired(true)
     ),
 
-  // /say (サーバー主のみ)
+  // /say (サーバー主、または許可されたロール持ち)
   new SlashCommandBuilder()
     .setName('say')
-    .setDescription('【サーバー主専用】Botに指定したメッセージを送信させます')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDescription('Botに指定したメッセージを送信させます')
     .addStringOption(option => 
       option.setName('message').setDescription('送信したいメッセージ').setRequired(true)
     ),
+
+  // /say-allow (サーバー主のみ：sayのロール開放)
+  new SlashCommandBuilder()
+    .setName('say-allow')
+    .setDescription('【サーバー主専用】Say使用権ロール持ちにsayコマンドを許可します'),
+
+  // /say-deny (サーバー主のみ：sayのロール制限)
+  new SlashCommandBuilder()
+    .setName('say-deny')
+    .setDescription('【サーバー主専用】sayコマンドをサーバー主のみに制限します'),
 
   // /mdv (姉妹鯖の案内)
   new SlashCommandBuilder()
@@ -124,7 +139,6 @@ const commands = [
 client.on('ready', async () => {
   console.log(`${client.user.tag} が起動したよ！`);
 
-  // ステータス（アクティビティ）の設定
   client.user.setPresence({
     activities: [{ name: '/help | 1 on 1稼働', type: ActivityType.Playing }],
     status: 'online',
@@ -188,6 +202,29 @@ function setRoleCount(userId, count) {
   });
 }
 
+// sayコマンドの許可状態を取得・設定する関数
+function getSayAllowed() {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT value FROM settings WHERE key = ?', ['say_allowed'], (err, row) => {
+      if (err) reject(err);
+      else resolve(row ? row.value : 0); // 0は不許可(主のみ), 1は許可(ロール持ちOK)
+    });
+  });
+}
+
+function setSayAllowed(value) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?',
+      ['say_allowed', value, value],
+      (err) => {
+        if (err) reject(err);
+        else resolve();
+      }
+    );
+  });
+}
+
 // コマンド処理
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
@@ -202,13 +239,15 @@ client.on('interactionCreate', async interaction => {
 • \`/sc rl\` : 現在の特別ロール所持数を確認します
 • \`/inv\` : 現在の招待数と次のロールまでの残りを確認します
 • \`/mdv\` : 姉妹鯖の情報を表示します
+• \`/say\` : 指定したメッセージをBotに喋らせる (サーバー主 or 許可時の「@⭐ | Say使用権」持ち)
 
-🔒 **【管理者・運営専用コマンド】**
+🔒 **【管理者・運営・主専用コマンド】**
 • \`/inv-add\` : 招待数を追加する (サーバー主)
 • \`/inv-remove\` : 招待数を減らす (サーバー主)
 • \`/rl-add\` : 特別ロール所持数を追加する (運営)
 • \`/rl-remove\` : 特別ロール所持数を減らす (運営)
-• \`/say\` : 指定したメッセージをBotに喋らせる (サーバー主)`;
+• \`/say-allow\` : Say使用権ロール持ちにsayを許可する (サーバー主)
+• \`/say-deny\` : sayをサーバー主のみに制限する (サーバー主)`;
 
     await interaction.reply({ content: helpMessage, ephemeral: true });
   }
@@ -311,10 +350,38 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply(`${target.username} さんの特別ロール所持数を **${removeCount}** 減らしました。（現在: ${newCount}）`);
   }
 
-  // --- /say (サーバー主のみ) ---
-  if (commandName === 'say') {
+  // --- /say-allow (サーバー主のみ：ロール持ちのsayを許可) ---
+  if (commandName === 'say-allow') {
     if (interaction.guild.ownerId !== interaction.user.id) {
       return interaction.reply({ content: 'このコマンドはサーバー主のみが使用できます！', ephemeral: true });
+    }
+
+    await setSayAllowed(1);
+    await interaction.reply({ content: '「@⭐ | Say使用権」ロールを持っているメンバーも `/say` を使えるように許可したよ！', ephemeral: true });
+  }
+
+  // --- /say-deny (サーバー主のみ：sayを主のみに制限) ---
+  if (commandName === 'say-deny') {
+    if (interaction.guild.ownerId !== interaction.user.id) {
+      return interaction.reply({ content: 'このコマンドはサーバー主のみが使用できます！', ephemeral: true });
+    }
+
+    await setSayAllowed(0);
+    await interaction.reply({ content: '`/say` をサーバー主のみ使用可能に制限したよ！', ephemeral: true });
+  }
+
+  // --- /say ---
+  if (commandName === 'say') {
+    const isOwner = (interaction.guild.ownerId === interaction.user.id);
+    const isAllowed = await getSayAllowed();
+    const targetRoleId = '1568415235159629975';
+    const hasRole = interaction.member.roles.cache.has(targetRoleId);
+
+    // 権限チェック：
+    // 1. サーバー主ならOK
+    // 2. /say-allow が有効になっていて、かつ指定のロールを持っていればOK
+    if (!isOwner && !(isAllowed === 1 && hasRole)) {
+      return interaction.reply({ content: 'このコマンドを使用する権限がありません！', ephemeral: true });
     }
 
     const messageText = options.getString('message');
