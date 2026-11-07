@@ -140,7 +140,7 @@ client.on('ready', async () => {
   console.log(`${client.user.tag} が起動したよ！`);
 
   client.user.setPresence({
-    activities: [{ name: '/help | 1 on 1稼働', type: ActivityType.Playing }],
+    activities: [{ name: '/help', type: ActivityType.Playing }],
     status: 'online',
   });
 
